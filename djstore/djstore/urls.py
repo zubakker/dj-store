@@ -34,4 +34,5 @@ urlpatterns = [
     path('auth/logout', views.LogoutView.as_view()),
     path('auth/register', views.RegisterView.as_view()),
     path('users/me', views.MeView.as_view()),
+    path('cart/', views.CartView.as_view()),
 ]

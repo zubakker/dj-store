@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
-from store.models import Tag, Product
+from store.models import Tag, Product, Cart
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
@@ -10,13 +10,6 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
             password=validated_data['password'],
         )
         return user
-    '''
-    def update(self, validated_data):
-        instance.email = validated_data.get('email', instance.email)
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
-        '''
-
     class Meta:
         model = User
         fields = ['url', 'username', 'email', 'password', 'groups', 'first_name', 'last_name']
@@ -44,6 +37,35 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
                     'description', 
                     'vendor_code', 
                     'stock',
-                    'tags',
-                    'author'
+                    'tags'
+                 ]
+
+class CartSerializer(serializers.HyperlinkedModelSerializer):
+    user = serializers.CharField(source='user.username')
+    def update(self, instance, item, amount):
+        if item in list(instance.items):
+            instance.items[item] += amount
+        else:
+            instance.items[item] = amount
+        return instance
+    def remove(self, instance, item, amount):
+        if item not in list(instance.items):
+            return instance
+        if amount == 'ALL':
+            del instance.items[item]
+        else:
+            instance.items[item] -= int(amount)
+            if instance.items[item] <= 0:
+                del instance.items[item]
+        return instance
+    def delete(self, instance):
+        instance.items = dict()
+        return instance
+        
+
+    class Meta:
+        model = Cart
+        fields = [
+                    'user',
+                    'items'
                  ]

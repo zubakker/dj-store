@@ -26,3 +26,12 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+class Cart(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
+    items = models.JSONField(blank=True, default=dict)
+    def __str__(self):
+        return self.user.username
