@@ -32,6 +32,11 @@ class Cart(models.Model):
         on_delete=models.CASCADE,
         primary_key=True,
     )
-    items = models.JSONField(blank=True, default=dict)
+    items = models.JSONField(blank=True, default=list)
+    cum_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     def __str__(self):
         return self.user.username
+    def __len__(self):
+        return len(self.items)
+    def __getitem__(self, key):
+        return self.items[key]

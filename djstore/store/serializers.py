@@ -25,12 +25,14 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 class TagSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Tag
-        fields = ['url', 'name']
+        fields = ['id', 'url', 'name']
 
 class ProductSerializer(serializers.HyperlinkedModelSerializer):
+    tags = TagSerializer(many=True, read_only='True')
     class Meta:
         model = Product
         fields = [
+                    'id',
                     'url', 
                     'name', 
                     'price', 
@@ -40,26 +42,55 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
                     'tags'
                  ]
 
+
 class CartSerializer(serializers.HyperlinkedModelSerializer):
     user = serializers.CharField(source='user.username')
     def update(self, instance, item, amount):
-        if item in list(instance.items):
-            instance.items[item] += amount
+        item_url = item['url']
+        for i in range(len(instance.items)):
+            if instance.items[i]['url'] == item_url:
+                instance.items[i]['amount'] += amount
+                item_cum_pr = float(instance[i]['price'])*amount
+                instance.items[i]['cum_price'] += item_cum_pr
+                instance.items[i]['cum_price'] = round(instance[i]['cum_price'], 2)
+
+                instance.cum_price = item_cum_pr + float(instance.cum_price)
+                break
         else:
-            instance.items[item] = amount
+            item_dict = {'url': item_url, 'amount': amount}
+            item_dict.update(item)
+            item_cum_pr = round(float(item_dict['price'])*amount, 2)
+            item_dict['cum_price'] = item_cum_pr
+
+            instance.cum_price = item_cum_pr + float(instance.cum_price)
+            instance.items.append(item_dict)
+        instance.cum_price = round(instance.cum_price, 2)
         return instance
     def remove(self, instance, item, amount):
-        if item not in list(instance.items):
-            return instance
-        if amount == 'ALL':
-            del instance.items[item]
-        else:
-            instance.items[item] -= int(amount)
-            if instance.items[item] <= 0:
-                del instance.items[item]
+        for i in range(len(instance.items)):
+            if instance.items[i]['id'] == int(item):
+                if amount == 'ALL':
+                    item_cum_pr = instance.items[i]['amount'] * float(instance.items[i]['price'])
+                    instance.cum_price = float(instance.cum_price) - item_cum_pr  
+                    del instance.items[i]
+                else:
+                    instance.items[i]['amount'] -= int(amount)
+                    item_cum_pr = float(instance[i]['price'])*amount
+                    instance.items[i]['cum_price'] -= item_cum_pr
+                    instance.items[i]['cum_price'] = round(instance[i]['cum_price'], 2)
+
+                    if instance.items[i]['amount'] <= 0:
+                        item_cum_pr = instance.items[i]['amount'] * float(instance.items[i]['price'])
+                        instance.cum_price = float(instance.cum_price) - item_cum_pr  
+                        del instance.items[i]
+                    else:
+                        instance.cum_price = float(instance.cum_price) - item_cum_pr  
+                break
+        instance.cum_price = round(instance.cum_price, 2)
         return instance
     def delete(self, instance):
-        instance.items = dict()
+        instance.items = list()
+        instance.cum_price = 0
         return instance
         
 
@@ -67,5 +98,6 @@ class CartSerializer(serializers.HyperlinkedModelSerializer):
         model = Cart
         fields = [
                     'user',
-                    'items'
+                    'items',
+                    'cum_price'
                  ]

@@ -17,12 +17,17 @@ from rest_framework.authtoken.models import Token
 from rest_framework import status
 
 from rest_framework.pagination import PageNumberPagination
+
+from django.core.paginator import Paginator
+
+
 class LoginView(APIView):
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [permissions.AllowAny]
     queryset = User.objects.all()
 
     def post(self, request, format=None):
+        print(request.data)
         if 'username' not in list(request.data) or 'password' not in list(request.data):
             return Response('No username or password provided',
                             status=status.HTTP_400_BAD_REQUEST)
@@ -90,19 +95,25 @@ class CartView(APIView):
     # TODO pagination
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         cart = Cart.objects.get(user=request.user)
+        # page = request.GET.get('page')
+        # paginator = Paginator(cart, ProductPaginator.page_size)
+        # cart.items = paginator.page(page).object_list
         serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
     def put(self, request):
         cart = Cart.objects.get(user=request.user)
         serializer = CartSerializer(cart, context={'request': request})
-        item = request.data['id']
+        item_id = request.data['id']
+        product = Product.objects.get(id=item_id)
+        product_ser = ProductSerializer(product, context={'request': request})
         if 'amount' not in list(request.data):
             amount = 1
         else:
             amount = request.data['amount']
-        serializer.update(cart, item, amount)
+        serializer.update(cart, product_ser.data, amount)
         cart.save()
         return Response(serializer.data)
     def delete(self, request):
@@ -118,6 +129,26 @@ class CartView(APIView):
             serializer.delete(cart)
         cart.save()
         return Response(serializer.data)
+
+class CheckoutView(APIView):
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    def post(self, request, format=None):
+        cart = Cart.objects.get(user=request.user)
+        serializer = CartSerializer(cart, context={'request': request})
+
+        if 'address' not in list(request.data):
+            return Response('No address provided',
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        address = request.data['address']
+        bought_items = serializer.data
+        # Send address bought items to shipping #
+        serializer.delete(cart)
+        cart.save()
+        return Response({"success": "Transaction successful."},
+                    status=status.HTTP_200_OK)
+        
         
     
 
