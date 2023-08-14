@@ -25,7 +25,7 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 class TagSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Tag
-        fields = ['id', 'url', 'name']
+        fields = ['id', 'name']
 
 class ProductSerializer(serializers.HyperlinkedModelSerializer):
     tags = TagSerializer(many=True, read_only='True')
@@ -33,7 +33,6 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
         model = Product
         fields = [
                     'id',
-                    'url', 
                     'name', 
                     'price', 
                     'description', 
@@ -41,6 +40,23 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
                     'stock',
                     'tags'
                  ]
+class CartItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField()
+    amount = serializers.IntegerField(required=False)
+    class Meta:
+        model = Product
+        fields = ['product_id', 'amount']
+
+class TokenSerializer(serializers.Serializer):
+    token = serializers.CharField()
+class UserAuthSerializer( serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+class UserUpdateSerializer( serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = User
+        fields = ['url', 'email', 'groups', 'first_name', 'last_name']
 
 
 class CartSerializer(serializers.HyperlinkedModelSerializer):
