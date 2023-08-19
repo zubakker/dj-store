@@ -12,7 +12,7 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         return user
     class Meta:
         model = User
-        fields = ['url', 'username', 'email', 'password', 'groups', 'first_name', 'last_name']
+        fields = ['username', 'email', 'password', 'groups', 'first_name', 'last_name']
 
 
 class GroupSerializer(serializers.HyperlinkedModelSerializer):
@@ -62,9 +62,9 @@ class UserUpdateSerializer( serializers.HyperlinkedModelSerializer):
 class CartSerializer(serializers.HyperlinkedModelSerializer):
     user = serializers.CharField(source='user.username')
     def update(self, instance, item, amount):
-        item_url = item['url']
+        item_id = item['id']
         for i in range(len(instance.items)):
-            if instance.items[i]['url'] == item_url:
+            if instance.items[i]['id'] == item_id:
                 instance.items[i]['amount'] += amount
                 item_cum_pr = float(instance[i]['price'])*amount
                 instance.items[i]['cum_price'] += item_cum_pr
@@ -73,7 +73,7 @@ class CartSerializer(serializers.HyperlinkedModelSerializer):
                 instance.cum_price = item_cum_pr + float(instance.cum_price)
                 break
         else:
-            item_dict = {'url': item_url, 'amount': amount}
+            item_dict = {'id': item_id, 'amount': amount}
             item_dict.update(item)
             item_cum_pr = round(float(item_dict['price'])*amount, 2)
             item_dict['cum_price'] = item_cum_pr
@@ -90,7 +90,8 @@ class CartSerializer(serializers.HyperlinkedModelSerializer):
                     instance.cum_price = float(instance.cum_price) - item_cum_pr  
                     del instance.items[i]
                 else:
-                    instance.items[i]['amount'] -= int(amount)
+                    amount = int(amount)
+                    instance.items[i]['amount'] -= amount
                     item_cum_pr = float(instance[i]['price'])*amount
                     instance.items[i]['cum_price'] -= item_cum_pr
                     instance.items[i]['cum_price'] = round(instance[i]['cum_price'], 2)
