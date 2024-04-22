@@ -53,11 +53,23 @@ urlpatterns = [
     # path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
-    path('auth/login', views.LoginView.as_view()),
-    path('auth/logout', views.LogoutView.as_view()),
-    path('auth/register', views.RegisterView.as_view()),
-    path('users/me', views.MeView.as_view()),
-    path('cart/', views.CartViewSet.as_view({'get': 'list', 'put': 'put', 'delete': 'delete'})),
-    path('products/', views.ProductViewSet.as_view({'get': 'list'})),
-    path('cart/checkout', views.CheckoutView.as_view()),
+    path('auth/login',  views.LoginView.as_view(),  
+         name='auth-login'),
+    path('auth/logout', views.LogoutView.as_view(), 
+         name='auth-logout'),
+    path('auth/register',   views.RegisterView.as_view(),   
+         name='auth-register'),
+
+    path('users/me',    views.MeView.as_view(), 
+         name='users-me'),
+
+    path('cart/',   
+         views.CartViewSet.as_view({'get': 'list', 'put': 'put', 'delete': 'delete'}),
+         name='cart'),
+    path('cart/checkout',   views.CheckoutView.as_view(),
+         name='cart-checkout'),
+
+    path('products/',   views.ProductViewSet.as_view({'get': 'list'}),  
+         name='products'),
+
 ]

@@ -61,7 +61,8 @@ class LogoutView(APIView):
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     queryset = User.objects.all()
-    @swagger_auto_schema(responses={200: 'Successfully logged out'})
+    @swagger_auto_schema(responses={200: 'Successfully logged out',
+                                    403: 'Invalid token'})
     def post(self, request, format=None):
         request.user.auth_token.delete()
         return Response({"success": "Successfully logged out."},
@@ -80,6 +81,8 @@ class RegisterView(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            cart = Cart(user=user)
+            cart.save()
             token = Token.objects.get_or_create(user=user)
             content = {
                 'token': token[0].key
@@ -93,12 +96,14 @@ class MeView(APIView):
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     queryset = User.objects.all()
-    @swagger_auto_schema(responses={200: UserSerializer})
+    @swagger_auto_schema(responses={200: UserSerializer,
+                                    403: 'Unauthorized'})
     def get(self, request):
         serializer = UserSerializer(request.user, context={'request': request})
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={200: UserSerializer}, 
+    @swagger_auto_schema(responses={200: UserSerializer,
+                                    403: 'Unauthorized'}, 
                          request_body=UserUpdateSerializer)
     def put(self, request, format=None):
         user_data = UserSerializer(request.user, context={'request': request}).data
@@ -109,7 +114,8 @@ class MeView(APIView):
         else:
             return Response(serializer.errors)
 
-    @swagger_auto_schema(responses={200: "Successfully deleted account"})
+    @swagger_auto_schema(responses={200: 'Successfully deleted account',
+                                    403: 'Unauthorized'})
     def delete(self, request, format=None):
         request.user.delete()
         return Response({"success": "Successfully deleted account."},
@@ -125,6 +131,8 @@ class CartViewSet(viewsets.ModelViewSet):
     product_amount  = openapi.Parameter('amount', openapi.IN_QUERY, description="Amount of products to be deleted from cart", type=openapi.TYPE_INTEGER)
 
 
+    @swagger_auto_schema(responses={200: CartSerializer,
+                                    403: 'Unauthorized access'})
     def list(self, request):
         # queryset = self.filter_queryset(self.get_queryset())
         cart = Cart.objects.get(user=request.user)
@@ -133,11 +141,18 @@ class CartViewSet(viewsets.ModelViewSet):
         # cart.items = paginator.page(page).object_list
         serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
-    @swagger_auto_schema(request_body=CartItemSerializer, responses={200: CartSerializer})
+    @swagger_auto_schema(request_body=CartItemSerializer, 
+                         responses={200: CartSerializer,
+                                    400: 'No valid product id provided',
+                                    403: 'Unauthorized access'})
     def put(self, request):
         cart = Cart.objects.get(user=request.user)
         serializer = CartSerializer(cart, context={'request': request})
+        if not request.data or 'id' not in list(request.data):
+            return Response('No product id provided', status=status.HTTP_400_BAD_REQUEST)
         item_id = request.data['id']
+        if not Product.objects.filter(id=item_id).exists():
+            return Response('No product id provided', status=status.HTTP_400_BAD_REQUEST)
         product = Product.objects.get(id=item_id)
         product_ser = ProductSerializer(product, context={'request': request})
         if 'amount' not in list(request.data):
@@ -147,9 +162,9 @@ class CartViewSet(viewsets.ModelViewSet):
         serializer.update(cart, product_ser.data, amount)
         cart.save()
         return Response(serializer.data)
-    @swagger_auto_schema(responses={200: CartSerializer}, manual_parameters=[
-        product_id, product_amount
-    ])
+    @swagger_auto_schema(responses={200: CartSerializer,
+                                    403: 'Unauthorized'}, 
+                         manual_parameters=[ product_id, product_amount ])
     
     def delete(self, request):
         item_id = request.GET.get('id')
@@ -201,6 +216,9 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
     
+    @swagger_auto_schema(responses={200: 'Valid query',
+                                    400: 'Invalid filtering params',
+                                    404: 'Invalid page number'}) 
     def list(self, request):
         queryset = self.filter_queryset(self.get_queryset())
 
